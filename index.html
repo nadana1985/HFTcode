@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quant Multi-Timeframe Expansion Dashboard</title>
+    <link rel="stylesheet" href="static/style.css">
+    <!-- TradingView Lightweight Charts CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header & Controls -->
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="logo-icon">📊</span>
+                <h1>Quant Breakout Dashboard</h1>
+            </div>
+            
+            <div class="control-panel">
+                <div class="control-group">
+                    <label for="symbol-select">Symbol</label>
+                    <select id="symbol-select">
+                        <option value="ETHUSDT" selected>ETHUSDT</option>
+                        <option value="BTCUSDT">BTCUSDT</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Date Navigation</label>
+                    <div class="date-controls">
+                        <button id="prev-day-btn" class="nav-btn">◀ Prev</button>
+                        <input type="date" id="date-picker" value="2026-07-02" min="2026-05-02" max="2026-07-02">
+                        <button id="next-day-btn" class="nav-btn">Next ▶</button>
+                    </div>
+                </div>
+
+                <div class="control-group toggle-group">
+                    <label class="switch-label">
+                        <input type="checkbox" id="marker-toggle">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-text">Show Chart Markers</span>
+                </div>
+
+                <div class="control-group slider-group">
+                    <label for="confluence-slider">Min Confluence: <span id="confluence-val">1</span></label>
+                    <input type="range" id="confluence-slider" min="1" max="20" value="1">
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Layout (Grid) -->
+        <main class="dashboard-grid">
+            <!-- Upper Half: Price Chart -->
+            <section class="chart-section panel">
+                <div class="panel-header">
+                    <h2>1-Minute Candlestick Chart (TradingView)</h2>
+                    <div id="chart-status" class="status-indicator">Loading chart data...</div>
+                </div>
+                <div id="chart-container"></div>
+            </section>
+
+            <!-- Lower Half: Event Viewer -->
+            <section class="details-section panel">
+                <div class="panel-header">
+                    <h2>Candle Details & HTF Closures</h2>
+                </div>
+                
+                <div class="details-content">
+                    <!-- Left: Selected Candle Info -->
+                    <div class="candle-info-card">
+                        <h3>1m Candle Stats</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item"><span class="stat-label">Open:</span> <span id="stat-open" class="stat-val">-</span></div>
+                            <div class="stat-item"><span class="stat-label">High:</span> <span id="stat-high" class="stat-val">-</span></div>
+                            <div class="stat-item"><span class="stat-label">Low:</span> <span id="stat-low" class="stat-val">-</span></div>
+                            <div class="stat-item"><span class="stat-label">Close:</span> <span id="stat-close" class="stat-val">-</span></div>
+                            <div class="stat-item"><span class="stat-label">Volume:</span> <span id="stat-vol" class="stat-val">-</span></div>
+                            <div class="stat-item"><span class="stat-label">Index:</span> <span id="stat-index" class="stat-val">-</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Divisors / HTF Closure Table -->
+                    <!-- Right: Divisors / HTF Closure Heatmap -->
+                    <div class="htf-heatmap-container" style="flex: 1; display: flex; flex-direction: column;">
+                        <h3>Closed Timeframes (Positive Divisors) <span id="heatmap-time-subtitle" style="font-size: 12px; color: var(--accent-blue); margin-left: 10px; font-weight: normal; font-family: monospace;"></span></h3>
+                        <div id="htf-heatmap-grid" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; min-height: 80px; align-content: flex-start;">
+                            <span class="placeholder-text" style="width: 100%; text-align: center; color: var(--text-secondary); margin-top: 15px;">Hover over the chart to inspect timeframes.</span>
+                        </div>
+                        <div class="heatmap-footer" style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 10px; margin-top: auto;">
+                            <div class="heatmap-legend" style="display: flex; gap: 15px; font-size: 11px;">
+                                <span style="display: flex; align-items: center; gap: 5px;"><span style="display: inline-block; width: 10px; height: 10px; background: var(--accent-green); border-radius: 2px;"></span> Bullish Expansion</span>
+                                <span style="display: flex; align-items: center; gap: 5px;"><span style="display: inline-block; width: 10px; height: 10px; background: var(--accent-red); border-radius: 2px;"></span> Bearish Breakdown</span>
+                                <span style="display: flex; align-items: center; gap: 5px;"><span style="display: inline-block; width: 10px; height: 10px; background: var(--neutral-gray); border-radius: 2px;"></span> Neutral</span>
+                            </div>
+                            <div id="heatmap-detail" style="font-size: 12px; color: var(--text-secondary); font-family: monospace;">Hover over blocks for details</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bottom Label Footer -->
+                <div class="panel-footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: center;">
+                    <div id="selected-time" class="highlight-text">Hover or click a candle on the chart</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="static/app.js"></script>
+</body>
+</html>
