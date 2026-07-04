@@ -103,7 +103,7 @@ function initChart() {
 
 function getDivisors(elapsedMinutes, R) {
     let divisors = [];
-    for (let i = R; i <= elapsedMinutes; i += R) {
+    for (let i = 1; i <= elapsedMinutes; i++) {
         if (elapsedMinutes % i === 0) {
             divisors.push(i);
         }
