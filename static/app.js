@@ -148,8 +148,9 @@ function updateStats(timeSec, candle, vol) {
     // Get divisors for the candle number (multiples of R)
     const divisors = getDivisors(elapsedMinutes, R);
     
-    // Find events matching this exact timestamp
-    const matchingEvents = rawEvents.filter(e => e.time === timeSec);
+    // Find events matching the close time of this resampled bar
+    const closeTimeSec = timeSec + (R - 1) * 60;
+    const matchingEvents = rawEvents.filter(e => e.time === closeTimeSec);
 
     // Build the Heatmap Grid
     htfHeatmapGrid.innerHTML = "";
@@ -273,16 +274,18 @@ function updateChartMarkers() {
     const markers = [];
     rawEvents.forEach(e => {
         if (e.timeframe === targetTf) {
+            const R = targetTf;
+            const markerTime = e.time - (R - 1) * 60;
             if (e.event_type === "Bullish_Expansion") {
                 markers.push({
-                    time: e.time,
+                    time: markerTime,
                     position: 'belowBar',
                     color: '#00e676',
                     shape: 'arrowUp',
                 });
             } else if (e.event_type === "Bearish_Expansion") {
                 markers.push({
-                    time: e.time,
+                    time: markerTime,
                     position: 'aboveBar',
                     color: '#ff3d00',
                     shape: 'arrowDown',
