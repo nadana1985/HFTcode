@@ -6,6 +6,7 @@ let rawKlines = [];
 let rawEvents = [];
 
 const symbolSelect = document.getElementById("symbol-select");
+const timeframeSelect = document.getElementById("timeframe-select");
 const datePicker = document.getElementById("date-picker");
 const prevDayBtn = document.getElementById("prev-day-btn");
 const nextDayBtn = document.getElementById("next-day-btn");
@@ -15,6 +16,8 @@ const confluenceVal = document.getElementById("confluence-val");
 const chartStatus = document.getElementById("chart-status");
 
 // Stats selectors
+const chartTitle = document.getElementById("chart-title");
+const statsTitle = document.getElementById("stats-title");
 const selectedTime = document.getElementById("selected-time");
 const statOpen = document.getElementById("stat-open");
 const statHigh = document.getElementById("stat-high");
@@ -98,27 +101,33 @@ function initChart() {
     });
 }
 
-function getDivisors(num) {
+function getDivisors(elapsedMinutes, R) {
     let divisors = [];
-    for (let i = 1; i <= num; i++) {
-        if (num % i === 0) {
+    for (let i = R; i <= elapsedMinutes; i += R) {
+        if (elapsedMinutes % i === 0) {
             divisors.push(i);
         }
     }
     return divisors.sort((a, b) => a - b);
 }
 
-function getCandleNumber(timestampSec) {
+function getCandleNumber(timestampSec, R) {
     const date = new Date(timestampSec * 1000);
-    // Convert to UTC time values
     const hour = date.getUTCHours();
     const min = date.getUTCMinutes();
-    return (hour * 60 + min) + 1;
+    const elapsedMinutes = (hour * 60 + min) + R;
+    return Math.floor(elapsedMinutes / R);
 }
 
 function updateStats(timeSec, candle, vol) {
     const date = new Date(timeSec * 1000);
     const dateStr = date.toISOString().replace('T', ' ').substring(0, 16) + " UTC";
+    
+    const tf = timeframeSelect.value;
+    const R = tf === "15m" ? 15 : (tf === "30m" ? 30 : 1);
+    
+    chartTitle.innerText = `${tf.toUpperCase()} Candlestick Chart (TradingView)`;
+    statsTitle.innerText = `${tf.toUpperCase()} Candle Stats`;
     
     selectedTime.innerText = dateStr;
     heatmapTimeSubtitle.innerText = `at ${dateStr}`;
@@ -128,11 +137,16 @@ function updateStats(timeSec, candle, vol) {
     statClose.innerText = `$${candle.close.toLocaleString()}`;
     statVol.innerText = vol ? vol.value.toLocaleString() : "-";
     
-    const candleNum = getCandleNumber(timeSec);
-    statIndex.innerText = `#${candleNum}`;
+    const hour = date.getUTCHours();
+    const min = date.getUTCMinutes();
+    const elapsedMinutes = (hour * 60 + min) + R;
+    
+    const candleNum = Math.floor(elapsedMinutes / R);
+    const maxIndex = 1440 / R;
+    statIndex.innerText = `#${candleNum} / ${maxIndex}`;
 
-    // Get divisors for the candle number
-    const divisors = getDivisors(candleNum);
+    // Get divisors for the candle number (multiples of R)
+    const divisors = getDivisors(elapsedMinutes, R);
     
     // Find events matching this exact timestamp
     const matchingEvents = rawEvents.filter(e => e.time === timeSec);
@@ -205,12 +219,13 @@ function clearStats() {
 async function loadData() {
     const symbol = symbolSelect.value;
     const date = datePicker.value;
+    const tf = timeframeSelect.value;
     
     chartStatus.innerText = "Fetching data...";
     
     try {
         // Fetch raw klines
-        const klineRes = await fetch(`/api/klines?symbol=${symbol}&date=${date}`);
+        const klineRes = await fetch(`/api/klines?symbol=${symbol}&date=${date}&resolution=${tf}`);
         const klines = await klineRes.json();
         
         if (klines.error) {
@@ -252,9 +267,12 @@ function updateChartMarkers() {
         return;
     }
     
+    const tf = timeframeSelect.value;
+    const targetTf = tf === "15m" ? 15 : (tf === "30m" ? 30 : 1);
+    
     const markers = [];
     rawEvents.forEach(e => {
-        if (e.timeframe === 1) {
+        if (e.timeframe === targetTf) {
             if (e.event_type === "Bullish_Expansion") {
                 markers.push({
                     time: e.time,
@@ -296,6 +314,7 @@ function offsetDay(days) {
 
 // Event Listeners
 symbolSelect.addEventListener("change", loadData);
+timeframeSelect.addEventListener("change", loadData);
 datePicker.addEventListener("change", loadData);
 prevDayBtn.addEventListener("click", () => offsetDay(-1));
 nextDayBtn.addEventListener("click", () => offsetDay(1));

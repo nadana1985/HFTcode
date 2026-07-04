@@ -27,6 +27,15 @@
                 </div>
 
                 <div class="control-group">
+                    <label for="timeframe-select">Chart TF</label>
+                    <select id="timeframe-select">
+                        <option value="1m" selected>1m</option>
+                        <option value="15m">15m</option>
+                        <option value="30m">30m</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
                     <label>Date Navigation</label>
                     <div class="date-controls">
                         <button id="prev-day-btn" class="nav-btn">◀ Prev</button>
@@ -55,7 +64,7 @@
             <!-- Upper Half: Price Chart -->
             <section class="chart-section panel">
                 <div class="panel-header">
-                    <h2>1-Minute Candlestick Chart (TradingView)</h2>
+                    <h2 id="chart-title">1-Minute Candlestick Chart (TradingView)</h2>
                     <div id="chart-status" class="status-indicator">Loading chart data...</div>
                 </div>
                 <div id="chart-container"></div>
@@ -70,7 +79,7 @@
                 <div class="details-content">
                     <!-- Left: Selected Candle Info -->
                     <div class="candle-info-card">
-                        <h3>1m Candle Stats</h3>
+                        <h3 id="stats-title">1m Candle Stats</h3>
                         <div class="stats-grid">
                             <div class="stat-item"><span class="stat-label">Open:</span> <span id="stat-open" class="stat-val">-</span></div>
                             <div class="stat-item"><span class="stat-label">High:</span> <span id="stat-high" class="stat-val">-</span></div>

@@ -32,6 +32,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def handle_api_klines(self, params):
         symbol = params.get("symbol", ["BTCUSDT"])[0]
         date_str = params.get("date", ["2026-07-01"])[0] # format: YYYY-MM-DD
+        resolution = params.get("resolution", ["1m"])[0] # format: 1m, 15m, 30m
         
         # Load raw klines
         # File pattern matches: data/raw shards/{symbol}_1m_*.parquet
@@ -50,6 +51,17 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             # Ensure filtering works regardless of timezone
             df_filtered = df[df["datetime"].dt.strftime("%Y-%m-%d") == date_str].copy()
             df_filtered = df_filtered.sort_values("datetime")
+            
+            # Resample if resolution is 15m or 30m
+            if resolution in ["15m", "30m"]:
+                rule = "15Min" if resolution == "15m" else "30Min"
+                df_filtered = df_filtered.resample(rule, on="datetime").agg({
+                    "open": "first",
+                    "high": "max",
+                    "low": "min",
+                    "close": "last",
+                    "volume": "sum"
+                }).dropna().reset_index()
             
             # Lightweight charts expects time in unix timestamp (seconds)
             chart_data = []
