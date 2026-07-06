@@ -129,8 +129,11 @@ function updateStats(timeSec, candle, vol) {
     chartTitle.innerText = `${tf.toUpperCase()} Candlestick Chart (TradingView)`;
     statsTitle.innerText = `${tf.toUpperCase()} Candle Stats`;
     
-    selectedTime.innerText = dateStr;
-    heatmapTimeSubtitle.innerText = `at ${dateStr}`;
+    const dateClose = new Date((timeSec + R * 60) * 1000);
+    const dateCloseStr = dateClose.toISOString().replace('T', ' ').substring(0, 16) + " UTC";
+    
+    selectedTime.innerText = `${dateStr} to ${dateCloseStr.substring(11)}`;
+    heatmapTimeSubtitle.innerText = `closes at ${dateCloseStr}`;
     statOpen.innerText = `$${candle.open.toLocaleString()}`;
     statHigh.innerText = `$${candle.high.toLocaleString()}`;
     statLow.innerText = `$${candle.low.toLocaleString()}`;
@@ -139,6 +142,11 @@ function updateStats(timeSec, candle, vol) {
     
     const hour = date.getUTCHours();
     const min = date.getUTCMinutes();
+    
+    // For R resampled bars, the timestamp received (timeSec) is the OPEN time.
+    // The close time of the bar is timeSec + R * 60.
+    // The last 1-minute candle of the bar starts at timeSec + (R - 1) * 60.
+    // Since elapsedMinutes needs to represent the total elapsed minutes of the DAY at the CLOSE of the bar:
     const elapsedMinutes = (hour * 60 + min) + R;
     
     const candleNum = Math.floor(elapsedMinutes / R);
@@ -148,7 +156,10 @@ function updateStats(timeSec, candle, vol) {
     // Get divisors for the candle number (multiples of R)
     const divisors = getDivisors(elapsedMinutes, R);
     
-    // Find events matching the close time of this resampled bar
+    // Find events matching the close time of this resampled bar.
+    // The events raw database stores the event's timestamp as the start of the final 1-minute candle of the timeframe.
+    // E.g. for a 30m bar starting at 00:30 and closing at 01:00, the last 1-minute candle is at 00:59.
+    // So the event timestamp is 00:59 (which is timeSec + (R - 1) * 60).
     const closeTimeSec = timeSec + (R - 1) * 60;
     const matchingEvents = rawEvents.filter(e => e.time === closeTimeSec);
 
