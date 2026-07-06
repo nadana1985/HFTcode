@@ -161,11 +161,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             results = []
             prev_state = "Tie"
             prev_close = None
+            prev_open = None
             
             for _, row in df_filtered.iterrows():
                 time_val = row["datetime"]
                 elapsed = int(row["elapsed_minutes"])
                 curr_close = float(row["close"])
+                curr_open = float(row["open"])
                 
                 # Positive divisors of the elapsed minutes
                 divisors = [d for d in range(1, elapsed + 1) if elapsed % d == 0]
@@ -199,14 +201,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     if prev_close is not None and curr_close > prev_close:
                         signal = "BUY"
                 elif prev_state == "Bullish" and curr_state == "Bearish":
-                    # Trend shift validation filter: must close lower than previous bar's close
-                    if prev_close is not None and curr_close < prev_close:
+                    # Trend shift validation filter: must close lower than previous bar's open
+                    if prev_open is not None and curr_close < prev_open:
                         signal = "SELL"
                 
                 if curr_state != "Tie":
                     prev_state = curr_state
                 
                 prev_close = curr_close
+                prev_open = curr_open
                     
                 if signal:
                     results.append({
