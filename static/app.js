@@ -320,19 +320,19 @@ function updateChartMarkers() {
                 markers.push({
                     time: s.time,
                     position: 'belowBar',
-                    color: '#00e676',
-                    shape: 'arrowUp',
-                    text: 'BUY',
-                    size: 2
+                    color: '#ffd600', // Gold/Yellow color to differentiate from green expansion
+                    shape: 'circle',
+                    text: 'B',
+                    size: 1.5
                 });
             } else if (s.signal === "SELL") {
                 markers.push({
                     time: s.time,
                     position: 'aboveBar',
-                    color: '#ff3d00',
-                    shape: 'arrowDown',
-                    text: 'SELL',
-                    size: 2
+                    color: '#ff8f00', // Amber/Orange color to differentiate from red expansion
+                    shape: 'circle',
+                    text: 'S',
+                    size: 1.5
                 });
             }
         });
