@@ -196,14 +196,18 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 
                 # Detect state transitions (Sells and Buys)
                 signal = ""
-                if prev_state == "Bearish" and curr_state == "Bullish":
-                    # Trend shift validation filter: must close higher than previous bar's close
-                    if prev_close is not None and curr_close > prev_close:
-                        signal = "BUY"
-                elif prev_state == "Bullish" and curr_state == "Bearish":
-                    # Trend shift validation filter: must close lower than previous bar's open
-                    if prev_open is not None and curr_close < prev_open:
-                        signal = "SELL"
+                if prev_state == "Tie":
+                    if curr_state != "Tie":
+                        prev_state = curr_state
+                else:
+                    if prev_state == "Bearish" and curr_state == "Bullish":
+                        # Trend shift validation filter: must close higher than previous bar's close
+                        if prev_close is not None and curr_close > prev_close:
+                            signal = "BUY"
+                    elif prev_state == "Bullish" and curr_state == "Bearish":
+                        # Trend shift validation filter: must close lower than previous bar's open
+                        if prev_open is not None and curr_close < prev_open:
+                            signal = "SELL"
                 
                 if signal:
                     prev_state = curr_state
