@@ -133,9 +133,12 @@ function updateStats(timeSec, candle, vol) {
     
     const dateClose = new Date((timeSec + R * 60) * 1000);
     const dateCloseStr = dateClose.toISOString().replace('T', ' ').substring(0, 16) + " UTC";
+    const dateCloseMinus1 = new Date((timeSec + R * 60 - 1) * 1000);
+    const dateCloseMinus1Str = dateCloseMinus1.toISOString().replace('T', ' ').substring(0, 19) + " UTC";
+    const dateOpenStr = date.toISOString().replace('T', ' ').substring(0, 19) + " UTC";
     
     selectedTime.innerText = `${dateStr} to ${dateCloseStr.substring(11)}`;
-    heatmapTimeSubtitle.innerText = `closes at ${dateCloseStr}`;
+    heatmapTimeSubtitle.innerText = `time frame window ${dateOpenStr} to ${dateCloseMinus1Str.substring(11)}`;
     statOpen.innerText = `$${candle.open.toLocaleString()}`;
     statHigh.innerText = `$${candle.high.toLocaleString()}`;
     statLow.innerText = `$${candle.low.toLocaleString()}`;
