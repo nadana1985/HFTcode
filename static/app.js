@@ -4,6 +4,7 @@ let candleSeries;
 let volumeSeries;
 let rawKlines = [];
 let rawEvents = [];
+let rawSignals = [];
 
 const symbolSelect = document.getElementById("symbol-select");
 const timeframeSelect = document.getElementById("timeframe-select");
@@ -11,6 +12,7 @@ const datePicker = document.getElementById("date-picker");
 const prevDayBtn = document.getElementById("prev-day-btn");
 const nextDayBtn = document.getElementById("next-day-btn");
 const markerToggle = document.getElementById("marker-toggle");
+const signalToggle = document.getElementById("signal-toggle");
 const confluenceSlider = document.getElementById("confluence-slider");
 const confluenceVal = document.getElementById("confluence-val");
 const chartStatus = document.getElementById("chart-status");
@@ -248,9 +250,14 @@ async function loadData() {
         // Fetch events
         const eventRes = await fetch(`/api/events?symbol=${symbol}&date=${date}`);
         const events = await eventRes.json();
+
+        // Fetch signals
+        const signalRes = await fetch(`/api/signals?symbol=${symbol}&date=${date}&resolution=${tf}`);
+        const signals = await signalRes.json();
         
         rawKlines = klines;
         rawEvents = events;
+        rawSignals = signals;
         
         // Populate chart
         candleSeries.setData(klines);
@@ -266,7 +273,7 @@ async function loadData() {
         // Render markers
         updateChartMarkers();
         
-        chartStatus.innerText = `Loaded ${klines.length} candles, ${events.length} total timeframe events.`;
+        chartStatus.innerText = `Loaded ${klines.length} candles, ${events.length} events, ${signals.length} signals.`;
         chart.timeScale().fitContent();
     } catch (e) {
         chartStatus.innerText = `Fetch Error: ${e.message}`;
@@ -274,37 +281,65 @@ async function loadData() {
 }
 
 function updateChartMarkers() {
-    if (!markerToggle.checked) {
-        candleSeries.setMarkers([]);
-        return;
-    }
-    
     const tf = timeframeSelect.value;
     const targetTf = tf === "15m" ? 15 : (tf === "30m" ? 30 : 1);
     
     const markers = [];
-    rawEvents.forEach(e => {
-        if (e.timeframe === targetTf) {
-            const R = targetTf;
-            const markerTime = e.time - (R - 1) * 60;
-            if (e.event_type === "Bullish_Expansion") {
+
+    // 1. Add expansion events (standard chart markers)
+    if (markerToggle.checked) {
+        rawEvents.forEach(e => {
+            if (e.timeframe === targetTf) {
+                const R = targetTf;
+                const markerTime = e.time - (R - 1) * 60;
+                if (e.event_type === "Bullish_Expansion") {
+                    markers.push({
+                        time: markerTime,
+                        position: 'belowBar',
+                        color: '#00e676',
+                        shape: 'arrowUp',
+                        text: 'EXP'
+                    });
+                } else if (e.event_type === "Bearish_Expansion") {
+                    markers.push({
+                        time: markerTime,
+                        position: 'aboveBar',
+                        color: '#ff3d00',
+                        shape: 'arrowDown',
+                        text: 'EXP'
+                    });
+                }
+            }
+        });
+    }
+
+    // 2. Add transition signals (Trend BUY/SELL)
+    if (signalToggle.checked) {
+        rawSignals.forEach(s => {
+            if (s.signal === "BUY") {
                 markers.push({
-                    time: markerTime,
+                    time: s.time,
                     position: 'belowBar',
                     color: '#00e676',
                     shape: 'arrowUp',
+                    text: 'BUY',
+                    size: 2
                 });
-            } else if (e.event_type === "Bearish_Expansion") {
+            } else if (s.signal === "SELL") {
                 markers.push({
-                    time: markerTime,
+                    time: s.time,
                     position: 'aboveBar',
                     color: '#ff3d00',
                     shape: 'arrowDown',
+                    text: 'SELL',
+                    size: 2
                 });
             }
-        }
-    });
+        });
+    }
     
+    // Sort markers by time so Lightweight Charts renders them sequentially without warnings
+    markers.sort((a, b) => a.time - b.time);
     candleSeries.setMarkers(markers);
 }
 
@@ -333,6 +368,7 @@ datePicker.addEventListener("change", loadData);
 prevDayBtn.addEventListener("click", () => offsetDay(-1));
 nextDayBtn.addEventListener("click", () => offsetDay(1));
 markerToggle.addEventListener("change", updateChartMarkers);
+signalToggle.addEventListener("change", updateChartMarkers);
 
 confluenceSlider.addEventListener("input", (e) => {
     confluenceVal.innerText = e.target.value;

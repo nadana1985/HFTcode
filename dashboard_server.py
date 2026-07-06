@@ -23,6 +23,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         # API: /api/events
         elif path == "/api/events":
             self.handle_api_events(query_params)
+        # API: /api/signals
+        elif path == "/api/signals":
+            self.handle_api_signals(query_params)
         else:
             # Fallback to serving static files or index.html
             if path == "/" or path == "":
@@ -108,6 +111,104 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.send_response_json(event_data)
         except Exception as e:
             self.send_error_json(500, f"Error processing event data: {str(e)}")
+
+    def handle_api_signals(self, params):
+        symbol = params.get("symbol", ["BTCUSDT"])[0]
+        date_str = params.get("date", ["2026-07-01"])[0] # format: YYYY-MM-DD
+        resolution = params.get("resolution", ["1m"])[0] # format: 1m, 15m, 30m
+        
+        # Load raw klines to iterate resampled timeframe bars
+        raw_dir = "data/raw shards"
+        files = [f for f in os.listdir(raw_dir) if f.startswith(symbol) and f.endswith(".parquet")]
+        if not files:
+            self.send_error_json(404, f"No data found for symbol {symbol}")
+            return
+            
+        filepath = os.path.join(raw_dir, files[0])
+        events_filepath = f"data/events/{symbol}_expansion_events.parquet"
+        
+        if not os.path.exists(events_filepath):
+            self.send_response_json([])
+            return
+
+        try:
+            df = pd.read_parquet(filepath)
+            df["datetime"] = pd.to_datetime(df["datetime"])
+            
+            # Filter for specific date
+            df_filtered = df[df["datetime"].dt.strftime("%Y-%m-%d") == date_str].copy()
+            df_filtered = df_filtered.sort_values("datetime")
+            
+            # Resample if resolution is 15m or 30m
+            R = 1
+            if resolution in ["15m", "30m"]:
+                R = 15 if resolution == "15m" else 30
+                rule = f"{R}Min"
+                df_filtered = df_filtered.resample(rule, on="datetime").agg({
+                    "open": "first",
+                    "high": "max",
+                    "low": "min",
+                    "close": "last"
+                }).dropna().reset_index()
+            
+            df_filtered['elapsed_minutes'] = (df_filtered['datetime'].dt.hour * 60 + df_filtered['datetime'].dt.minute) + R
+            
+            # Load timeframe breakout events
+            events = pd.read_parquet(events_filepath)
+            events["datetime"] = pd.to_datetime(events["datetime"])
+            events_filtered = events[events["datetime"].dt.strftime("%Y-%m-%d") == date_str].copy()
+            
+            results = []
+            prev_state = "Tie"
+            
+            for _, row in df_filtered.iterrows():
+                time_val = row["datetime"]
+                elapsed = int(row["elapsed_minutes"])
+                
+                # Positive divisors of the elapsed minutes
+                divisors = [d for d in range(1, elapsed + 1) if elapsed % d == 0]
+                
+                curr_events = events_filtered[events_filtered["datetime"] == time_val + pd.Timedelta(minutes=R-1)]
+                
+                green_count = 0
+                red_count = 0
+                
+                for d in divisors:
+                    d_event = curr_events[curr_events["timeframe"] == d]
+                    if not d_event.empty:
+                        etype = d_event.iloc[0]["event_type"]
+                        if etype == "Bullish_Expansion":
+                            green_count += 1
+                        elif etype == "Bearish_Expansion":
+                            red_count += 1
+                
+                # Determine state
+                if green_count > red_count:
+                    curr_state = "Bullish"
+                elif red_count > green_count:
+                    curr_state = "Bearish"
+                else:
+                    curr_state = "Tie"
+                
+                # Detect state transitions (Sells and Buys)
+                signal = ""
+                if prev_state == "Bearish" and curr_state == "Bullish":
+                    signal = "BUY"
+                elif prev_state == "Bullish" and curr_state == "Bearish":
+                    signal = "SELL"
+                
+                if curr_state != "Tie":
+                    prev_state = curr_state
+                    
+                if signal:
+                    results.append({
+                        "time": int(time_val.timestamp()),
+                        "signal": signal
+                    })
+                    
+            self.send_response_json(results)
+        except Exception as e:
+            self.send_error_json(500, f"Error calculating signals: {str(e)}")
 
     def send_response_json(self, data):
         response_bytes = json.dumps(data).encode('utf-8')
