@@ -205,9 +205,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     if prev_open is not None and curr_close < prev_open:
                         signal = "SELL"
                 
-                if curr_state != "Tie":
+                if signal:
                     prev_state = curr_state
-                
+                    
                 prev_close = curr_close
                 prev_open = curr_open
                     
