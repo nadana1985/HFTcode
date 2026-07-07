@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quant Backtest Viewer & Trade Analytics</title>
+    <!-- Outfit & Inter Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0b0e14;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #adbac7;
+            --text-secondary: #768390;
+            --accent-blue: #539bf5;
+            --accent-green: #57ab5a;
+            --accent-red: #f47067;
+            --accent-gold: #c69026;
+            --accent-orange: #db6d28;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header Style */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #adbac7 30%, var(--accent-blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-btn {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            background-color: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+        }
+
+        /* Controls Row */
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-group label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        select, input[type="text"] {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            min-width: 140px;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input[type="text"]:focus {
+            border-color: var(--accent-blue);
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .metric-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-blue);
+        }
+
+        .metric-card.winrate::after { background: var(--accent-green); }
+        .metric-card.drawdown::after { background: var(--accent-red); }
+        .metric-card.expectancy::after { background: var(--accent-gold); }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* Main Workspace split */
+        .workspace-split {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 20px;
+        }
+
+        @media (max-width: 1000px) {
+            .workspace-split {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Panel Container */
+        .panel {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* Trades Table Styling */
+        .table-container {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--bg-primary);
+            font-weight: 600;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr {
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        tr.active-row {
+            background-color: rgba(83, 155, 245, 0.1) !important;
+            border-left: 2px solid var(--accent-blue);
+        }
+
+        /* Badge/Color Utilities */
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 10px;
+        }
+
+        .badge-buy {
+            background-color: rgba(87, 171, 90, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(87, 171, 90, 0.3);
+        }
+
+        .badge-sell {
+            background-color: rgba(244, 112, 103, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(244, 112, 103, 0.3);
+        }
+
+        .text-green { color: var(--accent-green); font-weight: 600; }
+        .text-red { color: var(--accent-red); font-weight: 600; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Details Panel */
+        .detail-card {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-row .label {
+            color: var(--text-secondary);
+        }
+
+        .detail-row .value {
+            font-weight: 600;
+        }
+
+        .placeholder-text {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-align: center;
+            padding: 40px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <header class="app-header">
+        <div class="logo-area">
+            <span class="logo-icon">📈</span>
+            <h1>Quant Backtest Viewer & Trade Analytics</h1>
+        </div>
+        <a href="/" class="nav-btn">◀ Back to Dashboard</a>
+    </header>
+
+    <!-- Controls -->
+    <section class="controls-row">
+        <div class="control-group">
+            <label for="symbol-select">Symbol</label>
+            <select id="symbol-select">
+                <option value="ETHUSDT" selected>ETHUSDT</option>
+                <option value="BTCUSDT">BTCUSDT</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="tf-select">Strategy TF</label>
+            <select id="tf-select">
+                <option value="30m" selected>30m</option>
+                <option value="15m">15m</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="outcome-filter">Filter Outcome</label>
+            <select id="outcome-filter">
+                <option value="ALL" selected>All Trades</option>
+                <option value="WIN">Winners</option>
+                <option value="LOSS">Losers</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="date-filter">Filter Date</label>
+            <input type="date" id="date-filter" min="2026-05-02" max="2026-07-02">
+        </div>
+    </section>
+
+    <!-- Metrics Cards -->
+    <section class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-label">TOTAL TRADES</div>
+            <div class="metric-value" id="val-total-trades">-</div>
+        </div>
+        <div class="metric-card winrate">
+            <div class="metric-label">WIN RATE</div>
+            <div class="metric-value" id="val-win-rate">-</div>
+        </div>
+        <div class="metric-card expectancy">
+            <div class="metric-label">PROFIT FACTOR</div>
+            <div class="metric-value" id="val-profit-factor">-</div>
+        </div>
+        <div class="metric-card drawdown">
+            <div class="metric-label">MAX EQUITY DRAWDOWN</div>
+            <div class="metric-value" id="val-drawdown">-</div>
+        </div>
+    </section>
+
+    <!-- Split Workspace -->
+    <div class="workspace-split">
+        <!-- Left Pane: Trades Table -->
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Trades Register</h2>
+                <div id="table-status" style="font-size: 11px; color: var(--text-secondary);">Loading...</div>
+            </div>
+            <div class="table-container">
+                <table id="trades-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Time</th>
+                            <th>Direction</th>
+                            <th>Entry Price</th>
+                            <th>Exit Price</th>
+                            <th>PnL (%)</th>
+                            <th>Duration</th>
+                            <th>Exit Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-tbody">
+                        <tr>
+                            <td colspan="8" class="placeholder-text">Select parameters to load backtest data.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Right Pane: Trade Details -->
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Selected Trade Metrics</h2>
+            </div>
+            <div id="details-panel-content">
+                <div class="placeholder-text">Click a trade in the register to view detailed metrics (MFE, MAE, TF Confluence).</div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    // State Variables
+    let allTrades = [];
+    let selectedTrade = null;
+
+    const symbolSelect = document.getElementById("symbol-select");
+    const tfSelect = document.getElementById("tf-select");
+    const outcomeFilter = document.getElementById("outcome-filter");
+    const dateFilter = document.getElementById("date-filter");
+    const tradesTbody = document.getElementById("trades-tbody");
+    const tableStatus = document.getElementById("table-status");
+
+    // Fetch and Load Backtest Trades
+    async function loadTrades() {
+        const symbol = symbolSelect.value;
+        const resolution = tfSelect.value;
+        
+        tableStatus.innerText = "Loading data...";
+        tradesTbody.innerHTML = `<tr><td colspan="8" class="placeholder-text">Fetching data from server...</td></tr>`;
+        
+        try {
+            const response = await fetch(`/api/trades?symbol=${symbol}&resolution=${resolution}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                tradesTbody.innerHTML = `<tr><td colspan="8" class="placeholder-text text-red">Error: ${data.error}</td></tr>`;
+                tableStatus.innerText = "Error";
+                return;
+            }
+            
+            allTrades = data;
+            tableStatus.innerText = `${allTrades.length} trades loaded`;
+            
+            calculateAndDisplayMetrics(allTrades);
+            renderTable(allTrades);
+        } catch (e) {
+            tradesTbody.innerHTML = `<tr><td colspan="8" class="placeholder-text text-red">Failed to load trades. Make sure the server is running.</td></tr>`;
+            tableStatus.innerText = "Fetch failed";
+        }
+    }
+
+    // Render Table based on filter conditions
+    function renderTable(tradesList) {
+        const outcome = outcomeFilter.value;
+        const selectedDateStr = dateFilter.value; // format: YYYY-MM-DD
+        
+        // Apply filters
+        let filtered = tradesList.filter(t => {
+            const matchesOutcome = outcome === "ALL" || 
+                                   (outcome === "WIN" && t.pnl_pct > 0) || 
+                                   (outcome === "LOSS" && t.pnl_pct <= 0);
+            
+            let matchesDate = true;
+            if (selectedDateStr) {
+                const tradeDate = new Date(t.entry_time);
+                const y = tradeDate.getUTCFullYear();
+                const m = String(tradeDate.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(tradeDate.getUTCDate()).padStart(2, '0');
+                const tradeDateStr = `${y}-${m}-${d}`;
+                matchesDate = tradeDateStr === selectedDateStr;
+            }
+            
+            return matchesOutcome && matchesDate;
+        });
+
+        if (filtered.length === 0) {
+            tradesTbody.innerHTML = `<tr><td colspan="8" class="placeholder-text">No trades match the active filters.</td></tr>`;
+            return;
+        }
+
+        tradesTbody.innerHTML = "";
+        filtered.forEach((t, i) => {
+            const tr = document.createElement("tr");
+            tr.dataset.tradeIndex = i;
+            
+            // Formatting
+            const dateStr = new Date(t.entry_time).toLocaleString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                timeZone: 'UTC'
+            }) + " UTC";
+            const pnlVal = (t.pnl_pct * 100).toFixed(2);
+            const pnlClass = t.pnl_pct > 0 ? "text-green" : "text-red";
+            const dirBadge = t.direction === "BUY" ? '<span class="badge badge-buy">BUY</span>' : '<span class="badge badge-sell">SELL</span>';
+            
+            tr.innerHTML = `
+                <td class="mono">${i + 1}</td>
+                <td class="mono">${dateStr}</td>
+                <td>${dirBadge}</td>
+                <td class="mono">$${t.entry_price.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="mono">$${t.exit_price.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="mono ${pnlClass}">${pnlVal}%</td>
+                <td class="mono">${t.duration_minutes} min</td>
+                <td class="mono" style="color: var(--text-secondary);">${t.exit_reason}</td>
+            `;
+            
+            tr.addEventListener("click", () => {
+                // Remove active classes
+                document.querySelectorAll("#trades-table tbody tr").forEach(el => el.classList.remove("active-row"));
+                tr.classList.add("active-row");
+                displayTradeDetails(t);
+            });
+            
+            tradesTbody.appendChild(tr);
+        });
+    }
+
+    // Display Trade Details on the Right Pane
+    function displayTradeDetails(trade) {
+        selectedTrade = trade;
+        const detailsContainer = document.getElementById("details-panel-content");
+        
+        const entryDate = new Date(trade.entry_time).toLocaleString('en-US', { timeZone: 'UTC' }) + " UTC";
+        const exitDate = new Date(trade.exit_time).toLocaleString('en-US', { timeZone: 'UTC' }) + " UTC";
+        const pnlPct = (trade.pnl_pct * 100).toFixed(3);
+        const pnlClass = trade.pnl_pct > 0 ? "text-green" : "text-red";
+        
+        detailsContainer.innerHTML = `
+            <div class="detail-card">
+                <div class="detail-row">
+                    <span class="label">Trade Direction</span>
+                    <span class="value">${trade.direction === "BUY" ? '<span class="badge badge-buy">BUY</span>' : '<span class="badge badge-sell">SELL</span>'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Entry Time</span>
+                    <span class="value mono" style="font-size: 11px;">${entryDate}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Exit Time</span>
+                    <span class="value mono" style="font-size: 11px;">${exitDate}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Exit Reason</span>
+                    <span class="value mono">${trade.exit_reason}</span>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="detail-row">
+                    <span class="label">Entry Price</span>
+                    <span class="value mono">$${trade.entry_price.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Exit Price</span>
+                    <span class="value mono">$${trade.exit_price.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Total Trade PnL</span>
+                    <span class="value mono ${pnlClass}">${pnlPct}%</span>
+                </div>
+            </div>
+
+            <div class="detail-card" style="border-left: 2px solid var(--accent-blue);">
+                <div class="detail-row">
+                    <span class="label">Max Favorable Run-up (MFE)</span>
+                    <span class="value mono text-green">${(trade.mfe_pct * 100).toFixed(2)}%</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Max Adverse Drawdown (MAE)</span>
+                    <span class="value mono text-red">${(trade.mae_pct * 100).toFixed(2)}%</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Trade Duration</span>
+                    <span class="value mono">${trade.duration_minutes} minutes</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Smallest Trigger TF</span>
+                    <span class="value mono">${trade.smallest_tf ? trade.smallest_tf + 'm' : 'N/A'}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // Calculate Summary Metrics
+    function calculateAndDisplayMetrics(trades) {
+        if (trades.length === 0) return;
+        
+        const totalTrades = trades.length;
+        const wins = trades.filter(t => t.pnl_pct > 0);
+        const losses = trades.filter(t => t.pnl_pct <= 0);
+        
+        const winRate = (wins.length / totalTrades) * 100;
+        
+        const grossProfit = wins.reduce((sum, t) => sum + t.pnl_pct, 0);
+        const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.pnl_pct, 0));
+        const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss) : grossProfit;
+        
+        // Equity Curve and Drawdown calculation
+        let equity = 1.0;
+        let peak = 1.0;
+        let maxDd = 0.0;
+        
+        // Sort chronologically for compounding curve
+        const chronological = [...trades].sort((a, b) => new Date(a.entry_time) - new Date(b.entry_time));
+        chronological.forEach(t => {
+            equity = equity * (1.0 + t.pnl_pct);
+            if (equity > peak) {
+                peak = equity;
+            }
+            const dd = (peak - equity) / peak;
+            if (dd > maxDd) {
+                maxDd = dd;
+            }
+        });
+
+        // Update UI
+        document.getElementById("val-total-trades").innerText = totalTrades;
+        document.getElementById("val-win-rate").innerText = `${winRate.toFixed(2)}%`;
+        document.getElementById("val-profit-factor").innerText = profitFactor === Infinity ? "∞" : profitFactor.toFixed(2);
+        document.getElementById("val-drawdown").innerText = `${(maxDd * 100).toFixed(2)}%`;
+    }
+
+    // Event Listeners
+    symbolSelect.addEventListener("change", loadTrades);
+    tfSelect.addEventListener("change", loadTrades);
+    outcomeFilter.addEventListener("change", () => renderTable(allTrades));
+    dateFilter.addEventListener("change", () => renderTable(allTrades));
+
+    // Initial Load
+    window.addEventListener("DOMContentLoaded", loadTrades);
+</script>
+
+</body>
+</html>

@@ -26,6 +26,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         # API: /api/signals
         elif path == "/api/signals":
             self.handle_api_signals(query_params)
+        # API: /api/trades
+        elif path == "/api/trades":
+            self.handle_api_trades(query_params)
         else:
             # Fallback to serving static files or index.html
             if path == "/" or path == "":
@@ -224,6 +227,30 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.send_response_json(results)
         except Exception as e:
             self.send_error_json(500, f"Error calculating signals: {str(e)}")
+
+    def handle_api_trades(self, params):
+        symbol = params.get("symbol", ["BTCUSDT"])[0]
+        resolution = params.get("resolution", ["30m"])[0]
+        
+        output_dir = "docs"
+        import glob
+        import numpy as np
+        
+        pattern = os.path.join(output_dir, f"{symbol}_{resolution}_trades*.csv")
+        files = glob.glob(pattern)
+        if not files:
+            self.send_response_json([])
+            return
+            
+        # Get the latest modified file (in case of timestamped safety files)
+        latest_file = max(files, key=os.path.getmtime)
+        try:
+            df = pd.read_csv(latest_file)
+            df = df.replace({np.nan: None})
+            trades_data = df.to_dict(orient="records")
+            self.send_response_json(trades_data)
+        except Exception as e:
+            self.send_error_json(500, f"Error reading trade data: {str(e)}")
 
     def send_response_json(self, data):
         response_bytes = json.dumps(data).encode('utf-8')
